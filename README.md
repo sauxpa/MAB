@@ -1,7 +1,6 @@
-# Sub-Sampling Dueling Algorithms, Neurips 2020
+# MAB
 
-This repositery contains the code associated with the paper 
-"Sub-sampling for efficient Non-Parametric Bandit Exploration" presented at Neurips 2020. We provide a description of the code structure and a short guide to run some experiments.
+This is a fork from [Sub-Sampling-Dueling-Algorithms-Neurips20](https://github.com/DBaudry/Sub-Sampling-Dueling-Algorithms-Neurips20).
 
 ## How to run experiments
 
