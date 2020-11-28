@@ -5,7 +5,7 @@ from tqdm import tqdm
 from .utils import rd_argmax, rd_choice, rollavg_bottlneck, get_leader
 from .tracker import Tracker2
 from .utils import get_SSMC_star_min
-#import sobol_seq # for LDS-SDA
+# import sobol_seq  # for LDS-SDA
 
 mapping = {'B': arms.ArmBernoulli, 'beta': arms.ArmBeta, 'F': arms.ArmFinite, 'G': arms.ArmGaussian,
            'Exp': arms.ArmExponential, 'dirac': arms.dirac, 'TG': arms.ArmTG}
@@ -56,13 +56,14 @@ class GenericMAB:
     def kl(x, y):
         return None
 
-    def MC_regret(self, method, N, T, param_dic, store_step=-1):
+    def MC_regret(self, method, N, T, param_dic, store_step=-1, risk_measure='mean'):
         """
         Average Regret on a Number of Experiments
         :param method: string, method used (UCB, Thomson Sampling, etc..)
         :param N: int, number of independent experiments
         :param T: int, time horizon
         :param param_dic: dict, parameters for the different methods
+        :param risk_measure: str, dummy (for compatibility with RAMAB)
         """
         mc_regret = np.zeros(T)
         store = store_step > 0
@@ -384,8 +385,13 @@ class GenericMAB:
                 weight_dic = np.ones((self.nb_arms, int(tr.Na[l])))
             else:
                 if weight_dic.shape[1] < tr.Na[l]:
-                    weight_dic = np.concatenate([weight_dic,
-                                             np.ones((self.nb_arms, 1))], axis=1)
+                    weight_dic = np.concatenate(
+                        [
+                            weight_dic,
+                            np.ones((self.nb_arms, 1))
+                        ],
+                        axis=1
+                        )
                 for k in range(self.nb_arms):
                     if k != l and weight_dic[k].sum() < tr.Na[k]:
                         weight_dic[k] = np.ones(int(tr.Na[l]))

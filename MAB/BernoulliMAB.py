@@ -1,6 +1,7 @@
 """ Packages import """
 from .MAB import *
-from .utils import  rollavg_bottlneck, rd_choice, hypergeom_sample
+import numpy as np
+from .utils import  rollavg_bottlneck, hypergeom_sample
 from scipy.optimize import brentq
 
 
@@ -8,7 +9,10 @@ class BetaBernoulliMAB(GenericMAB):
     """
     Bernoulli Bandit Problem
     """
-    def __init__(self, p):
+    def __init__(self,
+                 p,
+                 risk_measure='mean'  # dummy
+                 ):
         """
         Initialization
         :param p: np.array, true probabilities of success for each arm

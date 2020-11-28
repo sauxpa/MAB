@@ -9,7 +9,10 @@ class TruncGaussianMAB(GenericMAB):
     """
     Gaussian Bandit Problem
     """
-    def __init__(self, p):
+    def __init__(self,
+                 p,
+                 risk_measure='mean'  # dummy
+                 ):
         """
         Initialization
         :param p: np.array, true values of 1/lambda for each arm

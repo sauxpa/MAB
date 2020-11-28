@@ -7,14 +7,28 @@ from time import time
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
-from .GaussianMAB import GaussianMAB
+from .GaussianMAB import GaussianMAB, GaussianRAMAB
 from .BernoulliMAB import BetaBernoulliMAB
 from .ExponentialMAB import ExponentialMAB
 from .Trunc_GaussianMAB import TruncGaussianMAB
 from tqdm import tqdm
 
-mapping = {'B': BetaBernoulliMAB, 'G': GaussianMAB, 'Exp': ExponentialMAB, 'TG': TruncGaussianMAB}
-mapping_name = {'B': 'Bernoulli', 'G': 'Gaussian', 'Exp': 'Exponential', 'TG': 'Truncated Gaussian'}
+mapping = {
+    'B': BetaBernoulliMAB,
+    'G': GaussianMAB,
+    'Exp': ExponentialMAB,
+    'TG': TruncGaussianMAB,
+    'RAG': GaussianRAMAB,
+    }
+
+
+mapping_name = {
+    'B': 'Bernoulli',
+    'G': 'Gaussian',
+    'Exp': 'Exponential',
+    'TG': 'Truncated Gaussian',
+    'RAG': 'Gaussian',
+    }
 
 def MC_xp(args, plot=False, pickle_path=None, caption='xp'):
     """
@@ -24,18 +38,23 @@ def MC_xp(args, plot=False, pickle_path=None, caption='xp'):
     :param caption: name of the file if pickle_path is not None
     :return: average regret, dict with all trajectories
     """
-    bandit, p, T, n_xp, methods, param, store_step = args
-    model = mapping[bandit](p)
+    bandit, p, T, n_xp, methods, param, store_step, risk_measure = args
+    model = mapping[bandit](p, risk_measure)
     all_r = []
     all_traj = {}
     for x in methods:
-        r, traj = model.MC_regret(x, n_xp, T, param[x], store_step)
+        r, traj = model.MC_regret(x, n_xp, T, param[x], store_step, risk_measure)
         all_r.append(r)
         all_traj[x] = traj
-    all_r.append(model.Cp*np.log(1+np.arange(T)))
+    if risk_measure == 'mean':
+        all_r.append(model.Cp*np.log(1+np.arange(T)))
     df_r = pd.DataFrame(all_r).T
-    df_r.columns = methods + ['lower bound']
-    df_r['lower bound'].iloc[0] = 0
+    if risk_measure == 'mean':
+        df_r.columns = methods + ['lower bound']
+        df_r['lower bound'].iloc[0] = 0
+    else:
+        df_r.columns = methods
+
     if plot:
         df_r.plot(figsize=(10, 8), logx=True)
     if pickle_path is not None:
@@ -50,8 +69,8 @@ def multiprocess_MC(args, plot=False, pickle_path=None, caption='xp'):
     t0 = time()
     cpu = mp.cpu_count()
     print('Running on %i cores' % cpu)
-    bandit, p, T, n_xp, methods, param, store_step = args
-    new_args = (bandit, p, T, n_xp//cpu+1, methods, param, store_step)
+    bandit, p, T, n_xp, methods, param, store_step, risk_measure = args
+    new_args = (bandit, p, T, n_xp//cpu+1, methods, param, store_step, risk_measure)
     res = Parallel(n_jobs=cpu)(delayed(MC_xp)(new_args) for _ in range(cpu))
     df_r = res[0][0]
     for i in range(cpu-1):

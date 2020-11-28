@@ -1,23 +1,34 @@
 """ Packages import """
 import numpy as np
-from numba import jit
 from scipy.stats import truncnorm as trunc_norm
 from .utils import convert_tg_mean
 
 
 class AbstractArm(object):
-    def __init__(self, mean, variance, random_state):
+    def __init__(self,
+                 mean,
+                 variance,
+                 alpha=None,
+                 random_state=0,
+                 ):
         """
         :param mean: float, expectation of the arm
         :param variance: float, variance of the arm
+        :param alpha: float or None, risk aversion level
+        :param erm: float or None, entropic risk measure of the arm
         :param random_state: int, seed to make experiments reproducible
         """
         self.mean = mean
         self.variance = variance
+        self.alpha = alpha
         self.local_random = np.random.RandomState(random_state)
 
     def sample(self):
         pass
+
+    @property
+    def erm(self):
+        return self.risk_measures.get('erm', None)
 
 
 class ArmBernoulli(AbstractArm):
@@ -61,17 +72,23 @@ class ArmBeta(AbstractArm):
 
 
 class ArmGaussian(AbstractArm):
-    def __init__(self, mu, eta, random_state=0):
+    def __init__(self, mu, eta, alpha=None, random_state=0):
         """
         :param mu: float, mean parameter in gaussian distribution
         :param eta: float, std parameter in gaussian distribution
+        :param alpha: float or None, risk aversion level
         :param random_state: int, seed to make experiments reproducible
         """
         self.mu = mu
         self.eta = eta
+        self.risk_measures = {
+            'erm': mu - alpha * eta ** 2 / 2,
+        }
         super(ArmGaussian, self).__init__(mean=mu,
                                           variance=eta**2,
-                                          random_state=random_state)
+                                          alpha=alpha,
+                                          random_state=random_state,
+                                          )
 
     def sample(self):
         """
@@ -114,8 +131,9 @@ class ArmExponential(AbstractArm):
         """
         self.p = p
         super(ArmExponential, self).__init__(mean=p,
-                                          variance=p**2,
-                                          random_state=random_state)
+                                             variance=p**2,
+                                             random_state=random_state
+                                             )
 
     def sample(self):
         """
@@ -150,8 +168,10 @@ class ArmTG(AbstractArm):
         self.scale = scale
         self.dist = trunc_norm(-mu/scale, b=(1-mu)/scale, loc=mu, scale=scale)
         self.dist.random_state = random_state
-        super(ArmTG, self).__init__(mean=convert_tg_mean(mu, scale), variance=scale**2,
-                                      random_state=random_state)
+        super(ArmTG, self).__init__(mean=convert_tg_mean(mu, scale),
+                                    variance=scale**2,
+                                    random_state=random_state
+                                    )
 
     def sample(self):
         """

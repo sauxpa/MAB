@@ -1,5 +1,6 @@
 """ Packages import """
 from .MAB import *
+import numpy as np
 from scipy.optimize import brentq
 
 
@@ -7,7 +8,10 @@ class ExponentialMAB(GenericMAB):
     """
     Gaussian Bandit Problem
     """
-    def __init__(self, p):
+    def __init__(self,
+                 p,
+                 risk_measure='mean'  # dummy
+                 ):
         """
         Initialization
         :param p: np.array, true values of (mu, sigma) for each arm with mean sampled from N(mu, sigma)
@@ -16,7 +20,6 @@ class ExponentialMAB(GenericMAB):
         super().__init__(methods=['Exp']*len(p), p=p)
         # Parameters used for stop learning policy
         self.Cp = sum([(self.mu_max-x)/self.kl(1/x, 1/self.mu_max) for x in self.means if x != self.mu_max])
-
 
     @staticmethod
     def kl(x, y):
@@ -51,8 +54,10 @@ class ExponentialMAB(GenericMAB):
             res = []
             for k in range(self.nb_arms):
                 mu = x.Sa[k] / x.Na[k]
+
                 def kl_shift(y):
                     return np.log(y/mu) + mu/y-1 - f(x.t) / x.Na[k]
+
                 res.append(brentq(kl_shift, mu*np.exp(f(x.t)/x.Na[k]), mu*np.exp(f(x.t)/x.Na[k]+1)))
             return np.array(res)
 

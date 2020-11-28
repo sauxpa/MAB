@@ -1,11 +1,27 @@
 import numpy as np
 
+
 class Tracker2:
     """
     This object is used in bandit models to store useful quantities to run the algorithm and report the experiment.
     """
-    def __init__(self, means, T, store_rewards_arm=False):
+    def __init__(self,
+                 means,
+                 T,
+                 alpha=None,
+                 risk_measure='mean',
+                 risk_measures=[],
+                 store_rewards_arm=False,
+                 ):
         self.means = means
+
+        self.risk_measure = risk_measure
+
+        # Risk aversion parameter
+        self.alpha = alpha
+
+        self.risk_measures = risk_measures
+
         self.nb_arms = means.shape[0]
         self.T = T
         self.Sa = np.zeros(self.nb_arms)
@@ -52,11 +68,15 @@ class Tracker2:
         if self.store_rewards_arm:
             self.rewards_arm[arm].append(reward)
 
-    def regret(self):
+    def regret(self, regret_mode='mean'):
         """
         Compute the regret of a single experiment
         :param reward: np.array, the array of reward obtained from the policy up to time T
         :param T: int, time horizon
         :return: np.array, cumulative regret for a single experiment
         """
-        return self.means.max() * np.arange(1, self.T + 1) - np.cumsum(np.array(self.means)[self.arm_sequence])
+        if regret_mode == 'mean':
+            return self.means.max() * np.arange(1, self.T + 1) - np.cumsum(np.array(self.means)[self.arm_sequence])
+        else:
+            rhos = self.risk_measures[self.risk_measure]
+            return rhos.max() * np.arange(1, self.T + 1) - np.cumsum(np.array(rhos)[self.arm_sequence])

@@ -3,6 +3,7 @@ from .BernoulliMAB import *
 from .ExponentialMAB import *
 from .GaussianMAB import *
 from .MAB import *
+from .RAMAB import *
 from .tracker import *
 from .Trunc_GaussianMAB import *
 from .utils import *
