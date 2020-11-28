@@ -1,4 +1,5 @@
 import numpy as np
+from bisect import bisect, insort
 
 
 class Tracker2:
@@ -12,6 +13,7 @@ class Tracker2:
                  risk_measure='mean',
                  risk_measures=[],
                  store_rewards_arm=False,
+                 store_sorted_rewards_arm=False,
                  ):
         self.means = means
 
@@ -30,8 +32,13 @@ class Tracker2:
         self.arm_sequence = np.empty(self.T, dtype=int)
         self.t = 0
         self.store_rewards_arm = store_rewards_arm
+        self.store_sorted_rewards_arm = store_sorted_rewards_arm
         if store_rewards_arm:
             self.rewards_arm = [[] for _ in range(self.nb_arms)]
+        if store_sorted_rewards_arm:
+            self.sorted_rewards_arm = [[] for _ in range(self.nb_arms)]
+            self.Na_quantile = np.zeros(self.nb_arms)
+            self.idx_quantile = np.zeros(self.nb_arms)
 
     def reset(self):
         """
@@ -49,7 +56,11 @@ class Tracker2:
         self.rewards_arm = [[]]*self.nb_arms
         if self.store_rewards_arm:
             self.rewards_arm = [[] for _ in range(self.nb_arms)]
-
+        if self.store_sorted_rewards_arm:
+            self.sorted_rewards_arm = [[] for _ in range(self.nb_arms)]
+            self.Na_quantile = np.zeros(self.nb_arms)
+            self.idx_quantile = np.zeros(self.nb_arms)
+            
     def update(self, t, arm, reward):
         """
         Update all the parameters of interest after choosing the correct arm
@@ -67,6 +78,17 @@ class Tracker2:
         self.t = t
         if self.store_rewards_arm:
             self.rewards_arm[arm].append(reward)
+        if self.store_sorted_rewards_arm:
+            # Insert new reward to the histogram for corresponding action.
+            idx_reward = bisect(self.sorted_rewards_arm[arm], reward)
+            self.idx_quantile[arm] = np.ceil(
+                self.alpha * self.Na[arm]
+                ).astype(int)
+            insort(self.sorted_rewards_arm[arm], reward)
+
+            # Update number of visit to the alpha quantile of arm
+            if idx_reward <= self.idx_quantile[arm]:
+                self.Na_quantile[arm] += 1
 
     def regret(self, regret_mode='mean'):
         """

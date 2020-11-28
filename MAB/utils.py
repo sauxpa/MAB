@@ -85,6 +85,36 @@ def get_leader_ra(rewards_arm, empirical_risk_measure, Na, l_prev):
     return n_argmax[np.random.choice(rho_argmax)]
 
 
+def get_leader_cvar(sorted_rewards_arm, idx_quantile, empirical_cvar, Na, l_prev):
+    """
+    :param sorted_rewards_arm: rewards of each arm (array), sorted
+    :param idx_quantile: index of alpha quantile for each arm (array)
+    :param empirical_cvar: function
+    :param Na: Number of pulls of each arm (array)
+    :param l_prev: previous leader
+    :return: Leader for SSMC and SDA algorithms
+    """
+    m = np.amax(Na)
+    n_argmax = np.nonzero(Na == m)[0]
+    if n_argmax.shape[0] == 1:
+        l = n_argmax[0]
+        return l
+    else:
+        rhos = np.array(
+                [
+                    empirical_cvar(
+                        np.array(sorted_rewards_arm)[n],
+                        idx_quantile[n]
+                        ) for n in n_argmax
+                ]
+            )
+        rho_max = rhos.max()
+        rho_argmax = np.nonzero(rhos == rho_max)[0]
+        if np.nonzero(n_argmax[rho_argmax] == l_prev)[0].shape[0] > 0:
+            return l_prev
+    return n_argmax[np.random.choice(rho_argmax)]
+
+
 def get_SSMC_star_min(rewards_l, n_challenger, reshape_size):
     """
     little helper for SSMC*

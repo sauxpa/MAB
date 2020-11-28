@@ -3,7 +3,7 @@ import numpy as np
 from scipy.optimize import minimize_scalar, root_scalar
 import MAB.arms as arms
 from tqdm import tqdm
-from .utils import rd_argmax, get_leader_ra
+from .utils import rd_argmax, get_leader_ra, get_leader_cvar
 from .tracker import Tracker2
 from .utils import get_SSMC_star_min
 
@@ -56,12 +56,18 @@ class GenericRAMAB:
         erms = np.array([el.erm for el in self.MAB])
         erm_max = np.max(erms)
 
+        # cVaR
+        cvars = np.array([el.cvar for el in self.MAB])
+        cvar_max = np.max(cvars)
+
         self.risk_measures = {
             'erm': erms,
+            'cvar': cvars,
         }
 
         self.risk_measures_max = {
             'erm': erm_max,
+            'cvar': cvar_max,
         }
 
         self.mc_regret = None
@@ -237,9 +243,14 @@ class GenericRAMAB:
     def empirical_risk_measure(self):
         if self.risk_measure == 'erm':
             return self.empirical_erm
+        elif self.risk_measure == 'cvar':
+            return self.empirical_cvar
 
     def empirical_erm(self):
         pass
+
+    def empirical_cvar(self, sorted_rewards_hist, idx_quantile):
+        return np.mean(sorted_rewards_hist[:int(idx_quantile)])
 
     def RB_SDA(self, T, explo_func=default_exp):
         """
@@ -255,31 +266,58 @@ class GenericRAMAB:
             risk_measure=self.risk_measure,
             risk_measures=self.risk_measures,
             store_rewards_arm=True,
+            store_sorted_rewards_arm=self.risk_measure == 'cvar',
             )
         r, t, l = 1, 0, -1
-        empirical_risk_measure = self.empirical_risk_measure
+
         while t < self.nb_arms:
             arm = t
             tr.update(t, arm, self.MAB[arm].sample()[0])
             t += 1
         while t < T:
             l_prev = l
-            # l = get_leader(tr.Na, tr.Sa, l_prev)
-            l = get_leader_ra(tr.rewards_arm, empirical_risk_measure, tr.Na, l_prev)
+            # High risk of spaghettization but will do for now
+            if self.risk_measure == 'cvar':
+                l = get_leader_cvar(
+                    tr.sorted_rewards_arm,
+                    tr.idx_quantile,
+                    self.empirical_cvar,
+                    tr.Na,
+                    l_prev
+                    )
+            else:
+                l = get_leader_ra(tr.rewards_arm, self.empirical_risk_measure, tr.Na, l_prev)
 
             t_prev, forced_explo = t, explo_func(r)
             indic = (tr.Na < tr.Na[l]) * (tr.Na < forced_explo) * 1.
             for j in range(self.nb_arms):
                 if indic[j] == 0 and j != l and tr.Na[j] < tr.Na[l]:
                     tj = np.random.randint(tr.Na[l] - tr.Na[j])
-                    lead_risk_measure = empirical_risk_measure(
-                        tr.rewards_arm[l][tj:tj + int(tr.Na[j])],
-                        )
-                    challenger_risk_measure = empirical_risk_measure(
-                        tr.rewards_arm[j],
-                        )
-                    # print('leader: {}'.format(lead_risk_measure))
-                    # print('challenger: {}'.format(challenger_risk_measure))
+
+                    # High risk of spaghettization but will do for now
+                    if self.risk_measure == 'cvar':
+                        sorted_subsample = np.sort(
+                            tr.rewards_arm[l][tj:tj + int(tr.Na[j])]
+                            )
+                        idx_quantile_subsample = np.ceil(
+                            self.alpha * int(tr.Na[j])
+                            ).astype(int)
+
+                        lead_risk_measure = self.empirical_cvar(
+                            sorted_subsample,
+                            idx_quantile_subsample
+                            )
+                        challenger_risk_measure = self.empirical_cvar(
+                            tr.sorted_rewards_arm[j],
+                            tr.idx_quantile[j]
+                            )
+                    else:
+                        lead_risk_measure = self.empirical_risk_measure(
+                            tr.rewards_arm[l][tj:tj + int(tr.Na[j])],
+                            )
+                        challenger_risk_measure = self.empirical_risk_measure(
+                            tr.rewards_arm[j],
+                            )
                     if challenger_risk_measure >= lead_risk_measure and t < T:
                         indic[j] = 1
             if indic.sum() == 0:
