@@ -1,5 +1,6 @@
 """ Packages import """
 from .MAB import *
+from .MAB_nonstationary import *
 from .RAMAB import *
 import numpy as np
 
@@ -73,6 +74,42 @@ class GaussianMAB(GenericMAB):
         def index_func(x):
             return x.Sa / x.Na + np.sqrt(f(x.t)*2 / x.Na)
         return self.Index_Policy(T, index_func)
+
+
+class GaussianMAMAB(GenericNonStationaryMAB):
+    """
+    Gaussian Bandit Problem
+    """
+    def __init__(self,
+                 p,
+                 risk_measure='mean'  # dummy
+                 ):
+        """
+        Initialization
+        :param p: np.array, true values of 1/lambda for each arm
+        """
+        # Initialization of arms from GenericNonStationaryMAB
+        super().__init__(methods=['MAG']*len(p), p=p)
+
+    @staticmethod
+    def kl(mu1, mu2):
+        """
+        Implementation of the Kullback-Leibler divergence for two Gaussian N(mu, 1)
+        :param x: float
+        :param y: float
+        :return: float, KL(B(x), B(y))
+        """
+        return (mu2-mu1)**2/2
+
+    @staticmethod
+    def kl2(mu1, mu2, sigma1, sigma2):
+        """
+        Implementation of the Kullback-Leibler divergence for two Gaussian with different std
+        :param x: float
+        :param y: float
+        :return: float, KL(B(x), B(y))
+        """
+        return np.log(sigma2/sigma1) + 0.5 * (sigma1**2/sigma2**2 + (mu2-mu1)**2/sigma2**2 - 1)
 
 
 class GaussianRAMAB(GenericRAMAB):

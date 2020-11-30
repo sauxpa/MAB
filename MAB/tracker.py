@@ -4,7 +4,8 @@ from bisect import bisect, insort
 
 class Tracker2:
     """
-    This object is used in bandit models to store useful quantities to run the algorithm and report the experiment.
+    This object is used in bandit models to store useful quantities to run
+    the algorithm and report the experiment.
     """
     def __init__(self,
                  means,
@@ -13,6 +14,7 @@ class Tracker2:
                  risk_measure='mean',
                  risk_measures=[],
                  store_rewards_arm=False,
+                 store_visit_times=False,
                  store_sorted_rewards_arm=False,
                  ):
         self.means = means
@@ -32,9 +34,13 @@ class Tracker2:
         self.arm_sequence = np.empty(self.T, dtype=int)
         self.t = 0
         self.store_rewards_arm = store_rewards_arm
+        self.store_visit_times = store_visit_times
         self.store_sorted_rewards_arm = store_sorted_rewards_arm
+
         if store_rewards_arm:
             self.rewards_arm = [[] for _ in range(self.nb_arms)]
+        if store_visit_times:
+            self.visit_times = [[] for _ in range(self.nb_arms)]
         if store_sorted_rewards_arm:
             self.sorted_rewards_arm = [[] for _ in range(self.nb_arms)]
             self.Na_quantile = np.zeros(self.nb_arms)
@@ -56,11 +62,13 @@ class Tracker2:
         self.rewards_arm = [[]]*self.nb_arms
         if self.store_rewards_arm:
             self.rewards_arm = [[] for _ in range(self.nb_arms)]
+        if self.store_visit_times:
+            self.visit_times = [[] for _ in range(self.nb_arms)]
         if self.store_sorted_rewards_arm:
             self.sorted_rewards_arm = [[] for _ in range(self.nb_arms)]
             self.Na_quantile = np.zeros(self.nb_arms)
             self.idx_quantile = np.zeros(self.nb_arms)
-            
+
     def update(self, t, arm, reward):
         """
         Update all the parameters of interest after choosing the correct arm
@@ -78,6 +86,8 @@ class Tracker2:
         self.t = t
         if self.store_rewards_arm:
             self.rewards_arm[arm].append(reward)
+        if self.store_visit_times:
+            self.visit_times[arm].append(self.t)
         if self.store_sorted_rewards_arm:
             # Insert new reward to the histogram for corresponding action.
             idx_reward = bisect(self.sorted_rewards_arm[arm], reward)
@@ -102,3 +112,18 @@ class Tracker2:
         else:
             rhos = self.risk_measures[self.risk_measure]
             return rhos.max() * np.arange(1, self.T + 1) - np.cumsum(np.array(rhos)[self.arm_sequence])
+
+    def regret_dynamic(self, regret_mode='mean'):
+        """
+        Compute the dynamic regret (i.e when mean can change throught time) of a single experiment
+        :param reward: np.array, the array of reward obtained from the policy up to time T
+        :param T: int, time horizon
+        :return: np.array, cumulative regret for a single experiment
+        """
+        R = np.zeros(self.T)
+        if regret_mode == 'mean':
+            for t in range(self.T):
+                R[t] = np.max([self.means[k](t) for k in range(self.nb_arms)]) - self.means[self.arm_sequence[t]](t)
+            return np.cumsum(R)
+        else:
+            raise ValueError('Only available regret mode in dynamic regret is mean')

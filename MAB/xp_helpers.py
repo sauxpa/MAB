@@ -7,7 +7,7 @@ from time import time
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
-from .GaussianMAB import GaussianMAB, GaussianRAMAB
+from .GaussianMAB import GaussianMAB, GaussianRAMAB, GaussianMAMAB
 from .BernoulliMAB import BetaBernoulliMAB
 from .ExponentialMAB import ExponentialMAB
 from .Trunc_GaussianMAB import TruncGaussianMAB
@@ -19,6 +19,7 @@ mapping = {
     'Exp': ExponentialMAB,
     'TG': TruncGaussianMAB,
     'RAG': GaussianRAMAB,
+    'MAG': GaussianMAMAB,
     }
 
 
@@ -28,6 +29,7 @@ mapping_name = {
     'Exp': 'Exponential',
     'TG': 'Truncated Gaussian',
     'RAG': 'Gaussian',
+    'MAG': 'GaussianMAMAB',
     }
 
 def MC_xp(args, plot=False, pickle_path=None, caption='xp'):
@@ -38,7 +40,7 @@ def MC_xp(args, plot=False, pickle_path=None, caption='xp'):
     :param caption: name of the file if pickle_path is not None
     :return: average regret, dict with all trajectories
     """
-    bandit, p, T, n_xp, methods, param, store_step, risk_measure = args
+    bandit, p, T, n_xp, methods, param, store_step, risk_measure, add_lower_bound = args
     model = mapping[bandit](p, risk_measure)
     all_r = []
     all_traj = {}
@@ -46,10 +48,10 @@ def MC_xp(args, plot=False, pickle_path=None, caption='xp'):
         r, traj = model.MC_regret(x, n_xp, T, param[x], store_step, risk_measure)
         all_r.append(r)
         all_traj[x] = traj
-    if risk_measure == 'mean':
+    if add_lower_bound:
         all_r.append(model.Cp*np.log(1+np.arange(T)))
     df_r = pd.DataFrame(all_r).T
-    if risk_measure == 'mean':
+    if add_lower_bound:
         df_r.columns = methods + ['lower bound']
         df_r['lower bound'].iloc[0] = 0
     else:
@@ -69,8 +71,8 @@ def multiprocess_MC(args, plot=False, pickle_path=None, caption='xp'):
     t0 = time()
     cpu = mp.cpu_count()
     print('Running on %i cores' % cpu)
-    bandit, p, T, n_xp, methods, param, store_step, risk_measure = args
-    new_args = (bandit, p, T, n_xp//cpu+1, methods, param, store_step, risk_measure)
+    bandit, p, T, n_xp, methods, param, store_step, risk_measure, add_lower_bound = args
+    new_args = (bandit, p, T, n_xp//cpu+1, methods, param, store_step, risk_measure, add_lower_bound)
     res = Parallel(n_jobs=cpu)(delayed(MC_xp)(new_args) for _ in range(cpu))
     df_r = res[0][0]
     for i in range(cpu-1):

@@ -7,8 +7,11 @@ from .tracker import Tracker2
 from .utils import get_SSMC_star_min
 # import sobol_seq  # for LDS-SDA
 
-mapping = {'B': arms.ArmBernoulli, 'beta': arms.ArmBeta, 'F': arms.ArmFinite, 'G': arms.ArmGaussian,
-           'Exp': arms.ArmExponential, 'dirac': arms.dirac, 'TG': arms.ArmTG}
+mapping = {
+    'B': arms.ArmBernoulli, 'beta': arms.ArmBeta, 'F': arms.ArmFinite,
+    'G': arms.ArmGaussian, 'Exp': arms.ArmExponential, 'dirac': arms.dirac,
+    'TG': arms.ArmTG,
+    }
 
 
 def default_exp(x):

@@ -15,7 +15,6 @@ class AbstractArm(object):
         :param mean: float, expectation of the arm
         :param variance: float, variance of the arm
         :param alpha: float or None, risk aversion level
-        :param erm: float or None, entropic risk measure of the arm
         :param random_state: int, seed to make experiments reproducible
         """
         self.mean = mean

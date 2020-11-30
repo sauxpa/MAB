@@ -2,6 +2,7 @@
 import numpy as np
 from numba import jit
 import bottleneck as bn
+from scipy.special import softmax
 import scipy.stats as sc
 
 
@@ -52,6 +53,34 @@ def get_leader(Na, Sa, l_prev):
     """
     m = np.amax(Na)
     n_argmax = np.nonzero(Na == m)[0]
+    if n_argmax.shape[0] == 1:
+        l = n_argmax[0]
+        return l
+    else:
+        s_max = Sa[n_argmax].max()
+        s_argmax = np.nonzero(Sa[n_argmax] == s_max)[0]
+        if np.nonzero(n_argmax[s_argmax] == l_prev)[0].shape[0] > 0:
+            return l_prev
+    return n_argmax[np.random.choice(s_argmax)]
+
+
+def get_leader_weighted(Na, Sa, visit_times, t, gamma, l_prev):
+    """
+    :param Na: Number of pulls of each arm (array)
+    :param Sa: Sum of rewards of each arm (array)
+    :param visit_times: time index of visits to each arm (array)
+    :param t: current time (float)
+    :param gamma: discount factor
+    :param l_prev: previous leader
+    :return: Leader for SSMC and SDA algorithms
+    """
+    nb_arms = len(Na)
+    Na_weighted = np.zeros(nb_arms)
+    for k in range(nb_arms):
+        Na_weighted[k] = np.sum(gamma ** (t -  np.array(visit_times[k])))
+        # Na_weighted[k] = Na[k]
+    m = np.amax(Na_weighted)
+    n_argmax = np.nonzero(Na_weighted == m)[0]
     if n_argmax.shape[0] == 1:
         l = n_argmax[0]
         return l
