@@ -3,6 +3,7 @@ from .arms_nonstationary import *
 from .BernoulliMAB import *
 from .ExponentialMAB import *
 from .GaussianMAB import *
+from .LogGaussianMAB import *
 from .MAB import *
 from .MAB_nonstationary import *
 from .RAMAB import *

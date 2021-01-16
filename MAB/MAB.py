@@ -10,7 +10,7 @@ from .utils import get_SSMC_star_min
 mapping = {
     'B': arms.ArmBernoulli, 'beta': arms.ArmBeta, 'F': arms.ArmFinite,
     'G': arms.ArmGaussian, 'Exp': arms.ArmExponential, 'dirac': arms.dirac,
-    'TG': arms.ArmTG,
+    'TG': arms.ArmTG, 'LG': arms.ArmLogGaussian, 
     }
 
 
@@ -271,24 +271,33 @@ class GenericMAB:
             r += 1
         return tr
 
-    def non_parametric_TS(self, T, upper_bound=1):
+    def non_parametric_TS(self, T, upper_bound=1.0):
         """
         Implementation of the Non-parametric Thompson Sampling algorithm
         :param T: Time Horizon
-        :param upper_bound: Upper bound for the reward
+        :param upper_bound: Upper bound for the reward.
+            If None, use the empirical maximum.
         :return: Tracker object with the results of the run
         """
-        tr = Tracker2(self.means, T)
+        tr = Tracker2(self.means, T, store_rewards_arm=True)
         if upper_bound is not None:
             X = [[upper_bound] for _ in range(self.nb_arms)]
+        else:
+            X = [[0.0] for _ in range(self.nb_arms)]
         tr.Na = tr.Na + 1
         for t in range(T):
             V = np.zeros(self.nb_arms)
             for i in range(self.nb_arms):
-                V[i] = np.inner(np.random.dirichlet(np.ones(int(tr.Na[i]))), np.array(X[i]))
+                V[i] = np.inner(
+                    np.random.dirichlet(np.ones(int(tr.Na[i]))), np.array(X[i])
+                    )
             arm = rd_argmax(V)
             tr.update(t, arm, self.MAB[arm].sample()[0])
             X[arm].append(tr.reward[t])
+            if upper_bound is not None:
+                empirical_max = np.max(np.max(tr.rewards_arm))
+                for k in range(self.nb_arms):
+                    X[k][0] = empirical_max
         return tr
 
     def WR_SDA(self, T, explo_func=default_exp):

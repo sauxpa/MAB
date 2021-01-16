@@ -1,6 +1,6 @@
 """ Packages import """
 import numpy as np
-from scipy.stats import truncnorm as trunc_norm, norm
+from scipy.stats import truncnorm as trunc_norm, norm, lognorm
 from .utils import convert_tg_mean
 
 
@@ -46,8 +46,13 @@ class AbstractArm(object):
             # cVar is the conditional expectation given a level of VaR.
             return quantiles[quantile_grid < self.alpha].mean()
         except AttributeError:
-            raise AttributeError('Method ppf not implemented')
+            # raise AttributeError('Method ppf not implemented')
+            pass
 
+    def _get_erm(self, eps=1e-3):
+        """Dummy
+        """
+        pass
 
 class ArmBernoulli(AbstractArm):
     def __init__(self, p, random_state=0):
@@ -126,6 +131,39 @@ class ArmGaussian(AbstractArm):
         :return: np.ndarray, quantiles
         """
         return norm.ppf(q, self.mu, self.eta)
+
+class ArmLogGaussian(AbstractArm):
+    def __init__(self, mu, eta, alpha=None, random_state=0):
+        """
+        :param mu: float, mean parameter in log-gaussian distribution
+        :param eta: float, std parameter in log-gaussian distribution
+        :param alpha: float or None, risk aversion level
+        :param random_state: int, seed to make experiments reproducible
+        """
+        self.mu = mu
+        self.eta = eta
+
+        super(ArmLogGaussian, self).__init__(mean=np.exp(mu + 0.5 * eta ** 2),
+                                             variance=(np.exp(eta ** 2) -1) * np.exp(2 * mu + eta ** 2),
+                                             alpha=alpha,
+                                             random_state=random_state,
+                                             )
+
+    def sample(self, N=1):
+        """
+        Sampling strategy
+        :param N: int, sample size
+        :return: float, a sample from the arm
+        """
+        return self.local_random.lognormal(self.mu, self.eta, N)
+
+    def ppf(self, q):
+        """
+        Percentile function (inverse cumulative distribution function)
+        :param q: np.ndarray, quantiles to evaluate
+        :return: np.ndarray, quantiles
+        """
+        return lognorm.ppf(q, self.mu, self.eta)
 
 
 class ArmFinite(AbstractArm):
