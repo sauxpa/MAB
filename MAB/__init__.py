@@ -1,6 +1,7 @@
 from .arms import *
 from .arms_nonstationary import *
 from .BernoulliMAB import *
+from .CauchyMAB import *
 from .ExponentialMAB import *
 from .GaussianMAB import *
 from .LogGaussianMAB import *

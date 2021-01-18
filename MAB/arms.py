@@ -1,6 +1,6 @@
 """ Packages import """
 import numpy as np
-from scipy.stats import truncnorm as trunc_norm, norm, lognorm
+from scipy.stats import truncnorm as trunc_norm, norm, lognorm, cauchy
 from .utils import convert_tg_mean
 
 
@@ -251,3 +251,38 @@ class ArmTG(AbstractArm):
         """
         x = self.local_random.normal(self.mu, self.scale, N)
         return x * (x > 0) * (x < 1) + (x > 1)
+
+
+class ArmCauchy(AbstractArm):
+    def __init__(self, loc, scale, alpha=None, random_state=0):
+        """
+        :param loc: float, mode parameter in Cauchy distribution
+        :param scale: float, scale parameter in Cauchy distribution
+        :param alpha: float or None, risk aversion level
+        :param random_state: int, seed to make experiments reproducible
+        """
+        self.loc = loc
+        self.scale = scale
+
+        # Mode (or median) and scale rather than mean and variance...
+        super(ArmCauchy, self).__init__(mean=loc,
+                                        variance=scale ** 2,
+                                        alpha=alpha,
+                                        random_state=random_state,
+                                        )
+
+    def sample(self, N=1):
+        """
+        Sampling strategy
+        :param N: int, sample size
+        :return: float, a sample from the arm
+        """
+        return self.loc + self.scale * self.local_random.standard_cauchy(N)
+
+    def ppf(self, q):
+        """
+        Percentile function (inverse cumulative distribution function)
+        :param q: np.ndarray, quantiles to evaluate
+        :return: np.ndarray, quantiles
+        """
+        return cauchy.ppf(q, self.mu, self.eta)

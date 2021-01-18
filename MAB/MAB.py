@@ -10,7 +10,7 @@ from .utils import get_SSMC_star_min
 mapping = {
     'B': arms.ArmBernoulli, 'beta': arms.ArmBeta, 'F': arms.ArmFinite,
     'G': arms.ArmGaussian, 'Exp': arms.ArmExponential, 'dirac': arms.dirac,
-    'TG': arms.ArmTG, 'LG': arms.ArmLogGaussian, 
+    'TG': arms.ArmTG, 'LG': arms.ArmLogGaussian, 'C': arms.ArmCauchy, 
     }
 
 
