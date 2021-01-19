@@ -9,8 +9,9 @@ from .utils import get_SSMC_star_min
 
 mapping = {
     'B': arms.ArmBernoulli, 'beta': arms.ArmBeta, 'F': arms.ArmFinite,
+    'U': arms.ArmUniform,
     'G': arms.ArmGaussian, 'Exp': arms.ArmExponential, 'dirac': arms.dirac,
-    'TG': arms.ArmTG, 'LG': arms.ArmLogGaussian, 'C': arms.ArmCauchy, 
+    'TG': arms.ArmTG, 'LG': arms.ArmLogGaussian, 'C': arms.ArmCauchy,
     }
 
 
@@ -279,7 +280,7 @@ class GenericMAB:
             If None, use the empirical maximum.
         :return: Tracker object with the results of the run
         """
-        tr = Tracker2(self.means, T, store_rewards_arm=True)
+        tr = Tracker2(self.means, T, store_rewards_arm=upper_bound is None)
         if upper_bound is not None:
             X = [[upper_bound] for _ in range(self.nb_arms)]
         else:
@@ -294,7 +295,7 @@ class GenericMAB:
             arm = rd_argmax(V)
             tr.update(t, arm, self.MAB[arm].sample()[0])
             X[arm].append(tr.reward[t])
-            if upper_bound is not None:
+            if upper_bound is None:
                 empirical_max = np.max(np.max(tr.rewards_arm))
                 for k in range(self.nb_arms):
                     X[k][0] = empirical_max

@@ -74,6 +74,28 @@ class ArmBernoulli(AbstractArm):
         return (self.local_random.rand(N) < self.p)*1.
 
 
+class ArmUniform(AbstractArm):
+    def __init__(self, low, high, random_state=0):
+        """
+        :param low: float, lower bound of support
+        :param high: float, upper bound of support
+        :param random_state: int, seed to make experiments reproducible
+        """
+        self.low = low
+        self.high = high
+        super(ArmUniform, self).__init__(mean=0.5 * (low + high),
+                                         variance=1 / 12 * (high - low) ** 2,
+                                         random_state=random_state)
+
+    def sample(self, N=1):
+        """
+        Sampling strategy
+        :param N: int, sample size
+        :return: float, a sample from the arm
+        """
+        return self.local_random.uniform(low=self.low, high=self.high, size=N) 
+
+
 class ArmBeta(AbstractArm):
     def __init__(self, a, b, random_state=0):
         """

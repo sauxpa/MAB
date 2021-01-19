@@ -10,5 +10,6 @@ from .MAB_nonstationary import *
 from .RAMAB import *
 from .tracker import *
 from .Trunc_GaussianMAB import *
+from .UniformMAB import *
 from .utils import *
 from .xp_helpers import *
