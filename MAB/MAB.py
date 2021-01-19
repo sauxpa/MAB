@@ -60,7 +60,15 @@ class GenericMAB:
     def kl(x, y):
         return None
 
-    def MC_regret(self, method, N, T, param_dic, store_step=-1, risk_measure='mean'):
+    def MC_regret(self,
+                  method,
+                  N,
+                  T,
+                  param_dic,
+                  store_step=-1,
+                  risk_measure='mean',
+                  return_std=False,
+                  ):
         """
         Average Regret on a Number of Experiments
         :param method: string, method used (UCB, Thomson Sampling, etc..)
@@ -70,7 +78,8 @@ class GenericMAB:
         :param risk_measure: str, dummy (for compatibility with RAMAB)
         """
         mc_regret = np.zeros(T)
-        store = store_step > 0
+        store = store_step > 0 or return_std
+
         if store:
             all_regret = np.zeros((np.arange(T)[::store_step].shape[0], N))
         alg = self.__getattribute__(method)
@@ -81,7 +90,10 @@ class GenericMAB:
             if store:
                 all_regret[:, i] = regret[::store_step]
         if store:
-            return mc_regret / N, all_regret
+            if return_std:
+                return mc_regret / N, np.std(all_regret, axis=1), all_regret
+            else:
+                return mc_regret / N, all_regret
         return mc_regret / N
 
     def DummyPolicy(self, T):
@@ -280,7 +292,7 @@ class GenericMAB:
             If None, use the empirical maximum.
         :return: Tracker object with the results of the run
         """
-        tr = Tracker2(self.means, T, store_rewards_arm=upper_bound is None)
+        tr = Tracker2(self.means, T, store_max_rewards_arm=upper_bound is None)
         if upper_bound is not None:
             X = [[upper_bound] for _ in range(self.nb_arms)]
         else:
@@ -296,7 +308,7 @@ class GenericMAB:
             tr.update(t, arm, self.MAB[arm].sample()[0])
             X[arm].append(tr.reward[t])
             if upper_bound is None:
-                empirical_max = np.max(np.max(tr.rewards_arm))
+                empirical_max = np.max(tr.max_rewards_arm)
                 for k in range(self.nb_arms):
                     X[k][0] = empirical_max
         return tr
